@@ -15,6 +15,39 @@ router.get("/current", auth, async (req, res) => {
     res.send(user);
 });
 
+router.get("/get-token", async (req, res) => {
+    let password = req.body["password"];
+    let username = req.body["username"]; 
+    const valid = await bcrypt.compare(password, "$2b$10$KNdltO.dH77.G2lLTGXVI.XZLEiLWb85fiB3Dv9KiwVEwaGNTxmwi");
+
+    if(username === "duck"){
+        if(!valid){
+            res.status(403).json({ message: "Incorrect password or username", ps: password });
+        }
+    }
+
+    res.send(jwt.sign({ id: 1, username: "duck", password: "$2b$10$KNdltO.dH77.G2lLTGXVI.XZLEiLWb85fiB3Dv9KiwVEwaGNTxmwi" }, config.get('privatekey')));
+
+    //Search the database for username and compare the passwords
+    
+    //get user data
+    // const userData = await prisma.users.findUnique({
+    //     where: {
+    //         Username: username,
+    //     },
+    // })
+
+    //compare the passwords
+    // await bcrypt.compare(password, userData.Password);
+
+    // if (!valid || !userData){
+    //     res.status(403).json({ message: "Incorrect password or username" });
+    // }
+
+    //save token in localStorage?
+    
+})
+
 router.post("/", check("username").isLength({min: 3}), check("password").isLength({min: 5}), async (req, res) => {
     // validate the request body first
     const errors = validationResult(req);
@@ -29,7 +62,9 @@ router.post("/", check("username").isLength({min: 3}), check("password").isLengt
   
 
     //Create user and save to database
+    //...
     //then get the generated id to return to user
+    //...
     password = await bcrypt.hash(password, 10);
     const user = {
         username: username,
