@@ -20,7 +20,7 @@ router.get("/current", auth, async (req, res) => {
     res.send(user);
 });
 
-router.get("/get-token", async (req, res) => {
+router.get("/login", async (req, res) => {
     let password = req.body["password"];
     let username = req.body["username"]; 
     const valid = await bcrypt.compare(password, "$2b$10$KNdltO.dH77.G2lLTGXVI.XZLEiLWb85fiB3Dv9KiwVEwaGNTxmwi");
@@ -55,7 +55,17 @@ router.get("/get-token", async (req, res) => {
     
 })
 
+router.get("/logout", (req, res) => {
+    req.session.destroy();
+    res.redirect("/");
+})
+
 router.post("/", check("username").isLength({min: 3}), check("password").isLength({min: 5}), async (req, res) => {
+    //check if there is session
+    session = req.session;
+    if(!session.userid){
+        res.status(401).send({error: "Unauthorized. "})
+    }
     // validate the request body first
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

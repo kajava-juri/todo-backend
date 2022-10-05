@@ -43,7 +43,13 @@ app.get("/", (req, res) => {
 
 //Get all
 app.get('/api/todo', (req, res) => {
-  res.send(todos);
+  let session = req.session;
+  if(session.userid){
+    res.send(todos);
+  } else {
+    res.send({error: "Unauthorized"});
+  }
+
 })
 
 //Get by id
