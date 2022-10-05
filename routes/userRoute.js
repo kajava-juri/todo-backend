@@ -4,8 +4,31 @@ const express = require("express");
 const jwt = require('jsonwebtoken');
 const { body, query, validationResult, check } = require('express-validator');
 const router = express.Router();
+const cookieParser = require("cookie-parser");
+const sessions = require('express-session');
+const app = express();
 
 const config = require('config');
+
+const oneDay = 1000 * 60 * 60 * 24;
+app.use(sessions({
+    secret: "somesecretkey",
+    saveUninitialized:true,
+    cookie: { maxAge: oneDay },
+    resave: false 
+}));
+
+// parsing the incoming data
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+//serving public file
+app.use(express.static(__dirname));
+
+// cookie parser middleware
+app.use(cookieParser());
+
+var session;
 
 router.get("/current", auth, async (req, res) => {
     //search database with decoded json for user
@@ -20,13 +43,15 @@ router.get("/get-token", async (req, res) => {
     let username = req.body["username"]; 
     const valid = await bcrypt.compare(password, "$2b$10$KNdltO.dH77.G2lLTGXVI.XZLEiLWb85fiB3Dv9KiwVEwaGNTxmwi");
 
-    if(username === "duck"){
-        if(!valid){
-            res.status(403).json({ message: "Incorrect password or username", ps: password });
-        }
+    if(username !== "duck" || !valid){
+        res.status(403).json({ message: "Incorrect password or username", ps: password });
     }
 
-    res.send(jwt.sign({ id: 1, username: "duck", password: "$2b$10$KNdltO.dH77.G2lLTGXVI.XZLEiLWb85fiB3Dv9KiwVEwaGNTxmwi" }, config.get('privatekey')));
+    session=req.session;
+    session.userid=req.body.username;
+    res.send({...req.session});
+
+    //res.send(jwt.sign({ id: 1, username: "duck", password: "$2b$10$KNdltO.dH77.G2lLTGXVI.XZLEiLWb85fiB3Dv9KiwVEwaGNTxmwi" }, config.get('privatekey')));
 
     //Search the database for username and compare the passwords
     
