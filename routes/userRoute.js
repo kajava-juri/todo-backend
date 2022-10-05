@@ -4,29 +4,11 @@ const express = require("express");
 const jwt = require('jsonwebtoken');
 const { body, query, validationResult, check } = require('express-validator');
 const router = express.Router();
-const cookieParser = require("cookie-parser");
-const sessions = require('express-session');
 const app = express();
 
 const config = require('config');
 
-const oneDay = 1000 * 60 * 60 * 24;
-app.use(sessions({
-    secret: "somesecretkey",
-    saveUninitialized:true,
-    cookie: { maxAge: oneDay },
-    resave: false 
-}));
 
-// parsing the incoming data
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-//serving public file
-app.use(express.static(__dirname));
-
-// cookie parser middleware
-app.use(cookieParser());
 
 var session;
 

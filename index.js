@@ -4,9 +4,28 @@ const app = express()
 const port = 3000
 const usersRoute = require("./routes/userRoute")
 app.use(express.json());
+const cookieParser = require("cookie-parser");
+const sessions = require('express-session');
 
 const config = require('config');
 
+const oneDay = 1000 * 60 * 60 * 24;
+app.use(sessions({
+    secret: "somesecretkey",
+    saveUninitialized:true,
+    cookie: { maxAge: oneDay },
+    resave: true 
+}));
+
+// parsing the incoming data
+app.use(express.json());
+//app.use(express.urlencoded({ extended: true }));
+
+//serving public file
+app.use(express.static(__dirname));
+
+// cookie parser middleware
+app.use(cookieParser());
 
 const todos = [
     {id: 1, title: "task1"},
