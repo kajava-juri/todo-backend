@@ -1,5 +1,4 @@
 {
-  "type": "module",
   "dependencies": {
     "@prisma/client": "^4.4.0",
     "bcrypt": "^5.0.1",

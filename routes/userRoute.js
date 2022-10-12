@@ -1,12 +1,16 @@
-const auth = require("../middleware/auth");
+//import auth from "../middleware/auth.js";
 const bcrypt = require("bcrypt");
-const express = require("express");
+const express = require ("express");
 const jwt = require('jsonwebtoken');
 const { body, query, validationResult, check } = require('express-validator');
 const router = express.Router();
 const app = express();
 
-const config = require('config');
+//import config from '../config/default.json';
+
+const { PrismaClient } = require('@prisma/client')
+
+const prisma = new PrismaClient()
 
 var session;
 
@@ -85,14 +89,25 @@ router.post("/register", check("username").isLength({min: 3}), check("password")
     let username = req.body["username"];
     password = await bcrypt.hash(password, 10);
     const user = {
-        username: username,
-        password: password
+        Username: username,
+        Password: password
     }
 
-    res.send(user);
-
     //save user to database
-    //...
+    try
+    {
+
+        const createUser = await prisma.users.create({
+            data:{
+                ...user
+            }
+        })
+        res.send(JSON.stringify({"status": 200, "error": null, "response": user.id}));
+    }
+    catch(e)
+    {
+        res.send(JSON.stringify({"status": 500, "error": 'In create user '+e, "response": null}));
+    }
 })
 
 //login with JWT
