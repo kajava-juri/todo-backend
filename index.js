@@ -1,11 +1,25 @@
-const express = require('express')
+const express = require('express');
 const { body, query, validationResult, check } = require('express-validator');
-const app = express()
-const port = 3000
-const usersRoute = require("./routes/userRoute")
+const app = express();
+const port = 3000;
+const usersRoute = require("./routes/userRoute");
 app.use(express.json());
 const cookieParser = require("cookie-parser");
 const sessions = require('express-session');
+var mysql2 = require('mysql2/promise');
+var MySQLStore = require('express-mysql-session')(sessions);
+require('dotenv').config();
+
+var options = {
+	host: 'localhost',
+	port: 3306,
+	user: process.env.DATABASE_USER,
+	password: process.env.DATABASE_PASSWORD,
+	database: 'todo1'
+};
+
+var connection = mysql2.createPool(options);
+var sessionStore = new MySQLStore({}, connection);
 
 const config = require('config');
 
@@ -13,8 +27,9 @@ const oneDay = 1000 * 60 * 60 * 24;
 app.use(sessions({
     secret: "somesecretkey",
     saveUninitialized:true,
+    store: sessionStore,
     cookie: { maxAge: oneDay },
-    resave: true 
+    resave: false 
 }));
 
 // parsing the incoming data
