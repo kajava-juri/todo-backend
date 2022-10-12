@@ -24,49 +24,40 @@ var session;
 
 router.get("/current", (req, res) => {
     if(req.session.userid){
-        res.send({user: req.session.userid});
+        return res.send({session: req.session, id: req.session.id});
     } else{
-        res.status(401).send({error: "unauthorized - no user found"});
+        return res.status(401).send({error: "unauthorized - no user found"});
     }
 });
 
 router.post("/login", async (req, res) => {
     let password = req.body["password"];
     let username = req.body["username"]; 
-    const valid = await bcrypt.compare(password, "$2b$10$KNdltO.dH77.G2lLTGXVI.XZLEiLWb85fiB3Dv9KiwVEwaGNTxmwi"); //compare user password with encrypted duck123
 
-    //TODO 
+    try{
+        const user = await prisma.users.findUnique({
+            where: {
+                Username: username,
+            }
+        })
 
-    //get user data
-    // const userData = await prisma.users.findUnique({
-    //     where: {
-    //         Username: username,
-    //     },
-    // })
+        const valid = await bcrypt.compare(password, user.Password);
 
-    //compare the passwords
-    // await bcrypt.compare(password, userData.Password);
+        if (!valid || !user){
+            return res.status(403).json({ message: "Incorrect password or username" });
+        }
 
-    // if (!valid || !userData){
-    //     res.status(403).json({ message: "Incorrect password or username" });
-    // }
+        session=req.session;
+        session.userid=req.body.username;
+        session.createdAt = Date.now().toString();
 
-    if(username !== "duck" || !valid){
-        res.status(403).json({ message: "Incorrect password or username", ps: password });
+    }
+    catch(e)
+    {
+        return res.send(JSON.stringify({"status": 500, "error": 'In user '+e, "response": null}));
     }
 
-    session=req.session;
-    session.userid=req.body.username;
-    session.createdAt = Date.now().toString();
-    res.send({...req.session});
-
-    //res.send(jwt.sign({ id: 1, username: "duck", password: "$2b$10$KNdltO.dH77.G2lLTGXVI.XZLEiLWb85fiB3Dv9KiwVEwaGNTxmwi" }, config.get('privatekey')));
-
-    //Search the database for username and compare the passwords
-    
-
-    //save token in localStorage?
-    
+    return res.send({...req.session});
 })
 
 router.post("/logout", (req, res) => {
@@ -74,78 +65,56 @@ router.post("/logout", (req, res) => {
     res.send("session destroyed");
 })
 
-router.post("/register", check("username").isLength({min: 3}), check("password").isLength({min: 5}), async (req, res) => {
+router.post("/register", check("username").isLength({min: 3}).withMessage('must be at least 3 characters long'), check("password").isLength({min: 5}).withMessage('must be at least 5 characters long'), async (req, res) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    //check the database if user already exists
-    //...
-
-    //create user object with hashed password
     let password = req.body["password"];
     let username = req.body["username"];
-    password = await bcrypt.hash(password, 10);
-    const user = {
-        Username: username,
-        Password: password
-    }
 
-    //save user to database
-    try
-    {
-
-        const createUser = await prisma.users.create({
-            data:{
-                ...user
-            }
+    //check the database if user already exists
+    try{
+        const user = await prisma.users.findUnique({
+            where: {
+                Username: username,
+            },
         })
-        res.send(JSON.stringify({"status": 200, "error": null, "response": user.id}));
+    
+        if(user)
+        {
+            return res.status(302).send({ message: "User already exists" });
+        }
+
+        //create user object with hashed password
+        password = await bcrypt.hash(password, 10);
+        const newUser = {
+            Username: username,
+            Password: password
+        }
+
+        //save user to database
+        try
+        {
+            const createUser = await prisma.users.create({
+                data: newUser
+            })
+            return res.send({"status": 200, "response": "User created with id " + createUser.Id});
+        }
+        catch(e)
+        {
+            return res.send({"status": 500, "error": 'In create user ' + e, "response": null});
+        }
+
     }
     catch(e)
     {
-        res.send(JSON.stringify({"status": 500, "error": 'In create user '+e, "response": null}));
+        return res.send({"status": 500, "error": 'In user '+e, "response": null});
     }
+
 })
 
-//login with JWT
-router.post("/", check("username").isLength({min: 3}), check("password").isLength({min: 5}), async (req, res) => {
-    //check if there is session
-    session = req.session;
-    if(!session.userid){
-        res.status(401).send({error: "Unauthorized. "})
-    }
-    // validate the request body first
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    let password = req.body["password"];
-    let username = req.body["username"];
-  
-    //find an existing user
-    //...
-  
-
-    //Create user and save to database
-    //...
-    //then get the generated id to return to user
-    //...
-    password = await bcrypt.hash(password, 10);
-    const user = {
-        username: username,
-        password: password
-    }
-  
-    const token = jwt.sign({ id: 1, username: username, password: password }, config.get('privatekey'));
-    res.header("x-auth-token", token).send({
-      id: 1,
-      username: user.username,
-      password: user.password,
-
-    });
-});
 
 module.exports = router;

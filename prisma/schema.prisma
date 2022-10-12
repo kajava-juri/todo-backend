@@ -23,3 +23,9 @@ model users {
   Password String  @db.VarChar(255)
   tasks    tasks[]
 }
+
+model sessions {
+  Id      String  @id @db.VarChar(128)
+  Expires Int     @db.UnsignedInt
+  Data    String? @db.MediumText
+}
