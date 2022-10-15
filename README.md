@@ -1,5 +1,5 @@
 # todo-backend
-To start you need to create a new user. After user is created you'll need to login with the same credentials. On login a session is created and it's data is saved on the server while session id is saved and tampered in a cookie. Session will be expired after 24 hours. On logout session data is deleted as well as cookie. 
+To start you need to create a new user. After user is created you'll need to login with the same credentials. On login a session is created and its data is saved on the server while session id is saved and tampered in a cookie. Session will be expired after 24 hours. On logout session data is deleted as well as cookie. 
 
 You can not change or read others' tasks.
 
