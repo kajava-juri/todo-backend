@@ -24,6 +24,7 @@ var connection = mysql2.createPool(options);
 var sessionStore = new MySQLStore({}, connection);
 
 const config = require('config');
+const { Prisma } = require('@prisma/client');
 
 const oneDay = 1000 * 60 * 60 * 24;
 app.use(sessions({
@@ -46,84 +47,145 @@ app.use(express.static(__dirname));
 // cookie parser middleware
 app.use(cookieParser());
 
-
-
 async function getTasks(userId){
   return await prisma.tasks.findMany({
     where: {
-      UserId: 6
+      UserId: userId
     }
   })
 }
 
-async function getTaskById(){
-  
+async function getTaskById(taskId){
+  try{
+    const task = await prisma.tasks.findUniqueOrThrow({
+      where: {
+        Id: taskId
+      }
+    })
+    return task;
+  } catch (e){
+    return {error: "Task with id " + taskId + " was not found"};
+  }
+
 }
 
+async function deleteTaskbyId(taskId){
+  try{
+    const task = await prisma.tasks.delete({
+      where:{
+        Id: taskId
+      }
+    })
+    return task;
+  } catch(e){
+    if(e.code === "P2025"){
+      return {error: "Task with id " + taskId + " does not exist"};
+    }
+    
+  }
+
+}
 
 app.use("/api/todo", (req, res, next) => {
   if(req.session.user){
     next();
   } else {
-    res.status(401).send("Unauthorized");
+    return res.status(401).send("Unauthorized");
   }
 })
 
 app.get("/", (req, res) => {
-    res.status(200).send();
+    return res.status(200).send();
 })
 
 //Get all
 app.get('/api/todo', async (req, res) => {
   const userId = req.session.user.Id;
   const todos = await getTasks(userId);
-  res.send(todos);
+  return res.send(todos);
 })
 
 //Get by id
-app.get('/api/todo/:id', query('id'), (req, res) => {
-    res.send(todos[todoId]);
+app.get('/api/todo/:id', query('id'), async (req, res) => {
+  const taskId = parseInt(req.params.id);
+  const userId = req.session.user.Id;
+  const todo = await getTaskById(taskId);
+  if(todo.error){
+    return res.status(500).send(todo.error);
+  }
+  if(todo.UserId !== userId){
+    return res.status(403).send("Forbidden - you can only view your own tasks");
+  }
+
+  return res.send(todo);
 })
 
 //Create
-app.post("/api/todo/", body('id').isEmpty(), (req, res) => {
+app.post("/api/todo/", body('id').isEmpty(), async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const todo = {id: Math.ceil(Math.random()*100000), ...req.body}
-    todos.push(todo)
+    let {title, description} = req.body;
+
+    const todo = await prisma.tasks.create({
+      data: {
+        Title: title,
+        Description: description,
+        UserId: req.session.user.Id
+      }
+    })
+
     res.send(todo);
 })
 
 //DELETE
-app.delete("/api/todo/:id", (req, res) => {
-    let todoId = todos.map(t => t.id).indexOf(parseInt(req.params.id));
-    todos.splice(todoId, 1);
-    res.status(202).send();
+app.delete("/api/todo/:id", async (req, res) => {
+  const taskId = parseInt(req.params.id);
+  const userId = req.session.user.Id;
+  const todo = await getTaskById(taskId);
+  if(todo.error){
+    return res.status(500).send(todo.error);
+  }
+  if(todo.UserId !== userId){
+    return res.status(403).send("Forbidden - you can only delete your own tasks");
+  }
+
+  const deleteTodo = await deleteTaskbyId(todoId);
+  if(deleteTodo.error){
+    return res.status(500).send(deleteTodo.error);
+  }
+
+  res.status(202).send(deleteTodo);
 })
 
 //UPDATE
-app.put("/api/todo/:id", body("id").isEmpty(), (req, res) => {
+app.put("/api/todo/:id", body("id").isEmpty(), async (req, res) => {
     // Finds the validation errors in this request and wraps them in an object with handy functions
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    let todo = todos.find(t => t.id == req.params.id);
-    let todoid = todos.map(t => t.id).indexOf(parseInt(req.params.id));
-    let newTodo = req.body;
-  
-    Object.keys(newTodo).forEach(key => {
-        todo[key] = newTodo[key];
-    })
-  
-    todos[todoid] = todo;
-  
-    res.status(201).send({newTodo: {...todo}});
-  
+    const taskId = parseInt(req.params.id);
+
+    try{
+      const updateTask = await prisma.tasks.update({
+        where: {
+          Id: taskId
+        },
+        data:{
+          Title: req.body.title || undefined,
+          Description: req.body.description || undefined
+        }
+      })
+      return res.status(201).send("task updated");
+
+    } catch(e) {
+      return res.status(500).send({error: "Task with id " + taskId + " was not found"});
+    }
+
 })
 
 app.use("/api/users", usersRoute);

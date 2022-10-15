@@ -22,7 +22,7 @@ var session;
 
 router.get("/current", (req, res) => {
     if(req.session.user){
-        return res.send({session: req.session, id: req.session.id});
+        return res.send({session: req.session});
     } else{
         return res.status(401).send({error: "unauthorized - no user found"});
     }
@@ -64,6 +64,10 @@ router.post("/logout", (req, res) => {
 })
 
 router.post("/register", check("username").isLength({min: 3}).withMessage('must be at least 3 characters long'), check("password").isLength({min: 5}).withMessage('must be at least 5 characters long'), async (req, res) => {
+
+    if(req.session.user){
+        return res.send("Already logged in");
+    }
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
