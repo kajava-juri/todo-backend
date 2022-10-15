@@ -8,9 +8,7 @@ const app = express();
 
 //import config from '../config/default.json';
 
-const { PrismaClient } = require('@prisma/client')
-
-const prisma = new PrismaClient()
+const prisma = require("../prisma");
 
 var session;
 
@@ -23,7 +21,7 @@ var session;
 // });
 
 router.get("/current", (req, res) => {
-    if(req.session.userid){
+    if(req.session.user){
         return res.send({session: req.session, id: req.session.id});
     } else{
         return res.status(401).send({error: "unauthorized - no user found"});
@@ -47,9 +45,8 @@ router.post("/login", async (req, res) => {
             return res.status(403).json({ message: "Incorrect password or username" });
         }
 
-        session=req.session;
-        session.userid=req.body.username;
-        session.createdAt = Date.now().toString();
+        req.session.user = user;
+        //session.createdAt = Date.now().toString();
 
     }
     catch(e)

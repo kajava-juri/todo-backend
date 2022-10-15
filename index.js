@@ -10,6 +10,8 @@ var mysql2 = require('mysql2/promise');
 var MySQLStore = require('express-mysql-session')(sessions);
 require('dotenv').config();
 
+const prisma = require("./prisma");
+
 var options = {
 	host: 'localhost',
 	port: 3306,
@@ -44,18 +46,23 @@ app.use(express.static(__dirname));
 // cookie parser middleware
 app.use(cookieParser());
 
-const todos = [
-    {id: 1, title: "task1"},
-    {id: 2, title: "task2"},
-    {id: 3, title: "task3"},
-    {id: 4, title: "task4"},
-    {id: 5, title: "task5"},
-    {id: 6, title: "task6"},
-    {id: 7, title: "task7"},
-];
+
+
+async function getTasks(userId){
+  return await prisma.tasks.findMany({
+    where: {
+      UserId: 6
+    }
+  })
+}
+
+async function getTaskById(){
+  
+}
+
 
 app.use("/api/todo", (req, res, next) => {
-  if(req.session.userid){
+  if(req.session.user){
     next();
   } else {
     res.status(401).send("Unauthorized");
@@ -63,17 +70,18 @@ app.use("/api/todo", (req, res, next) => {
 })
 
 app.get("/", (req, res) => {
-    res.send(config.get("privatekey"));
+    res.status(200).send();
 })
 
 //Get all
-app.get('/api/todo', (req, res) => {
+app.get('/api/todo', async (req, res) => {
+  const userId = req.session.user.Id;
+  const todos = await getTasks(userId);
   res.send(todos);
 })
 
 //Get by id
 app.get('/api/todo/:id', query('id'), (req, res) => {
-    let todoId = todos.map(t => t.id).indexOf(parseInt(req.params.id));
     res.send(todos[todoId]);
 })
 
