@@ -23,9 +23,6 @@ var options = {
 var connection = mysql2.createPool(options);
 var sessionStore = new MySQLStore({}, connection);
 
-const config = require('config');
-const { Prisma } = require('@prisma/client');
-
 const oneDay = 1000 * 60 * 60 * 24;
 app.use(sessions({
     secret: "somesecretkey",
@@ -111,7 +108,7 @@ app.get('/api/todo/:id', query('id'), async (req, res) => {
   const userId = req.session.user.Id;
   const todo = await getTaskById(taskId);
   if(todo.error){
-    return res.status(500).send(todo.error);
+    return res.status(500).send({error: todo.error});
   }
   if(todo.UserId !== userId){
     return res.status(403).send("Forbidden - you can only view your own tasks");
@@ -146,7 +143,7 @@ app.delete("/api/todo/:id", async (req, res) => {
   const userId = req.session.user.Id;
   const todo = await getTaskById(taskId);
   if(todo.error){
-    return res.status(500).send(todo.error);
+    return res.status(500).send({error: todo.error});
   }
   if(todo.UserId !== userId){
     return res.status(403).send("Forbidden - you can only delete your own tasks");
@@ -154,7 +151,7 @@ app.delete("/api/todo/:id", async (req, res) => {
 
   const deleteTodo = await deleteTaskbyId(todoId);
   if(deleteTodo.error){
-    return res.status(500).send(deleteTodo.error);
+    return res.status(500).send({error: deleteTodo.error});
   }
 
   res.status(202).send(deleteTodo);
@@ -180,10 +177,14 @@ app.put("/api/todo/:id", body("id").isEmpty(), async (req, res) => {
           Description: req.body.description || undefined
         }
       })
-      return res.status(201).send("task updated");
+      return res.status(201).send({response: "task succesfully updated", updated_task: updateTask});
 
     } catch(e) {
-      return res.status(500).send({error: "Task with id " + taskId + " was not found"});
+      if(e.code == "P2025"){
+        return res.status(500).send({error: "Task with id " + taskId + " was not found"});
+      } else {
+        return res.status(500).send(e);
+      }
     }
 
 })

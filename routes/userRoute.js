@@ -45,7 +45,12 @@ router.post("/login", async (req, res) => {
             return res.status(403).json({ message: "Incorrect password or username" });
         }
 
-        req.session.user = user;
+        const userDto = {
+            Id: user.Id,
+            Username: user.Username
+        }
+
+        req.session.user = userDto;
         //session.createdAt = Date.now().toString();
 
     }
