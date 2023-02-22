@@ -3,7 +3,7 @@ To start you need to create a new user. After user is created you'll need to log
 
 You can not change or read others' tasks.
 
-API endpoint is localhost://3000/api by default if the port is not being used.
+API endpoint is localhost:3000/api by default if the port is not being used.
 
 ## Todo model
 
